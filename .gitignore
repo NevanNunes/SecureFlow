@@ -13,7 +13,7 @@ instance/
 .webassets-cache
 
 # Models
-*.pkl
+# *.pkl
 *.h5
 *.joblib
 
