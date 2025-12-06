@@ -57,6 +57,15 @@ class FraudDetectionModel:
         # Encode transaction type
         df['type'] = self.encoder.transform(df['type'])
 
+        # Ensure columns are in the correct order for the scaler
+        expected_columns = [
+            'step', 'type', 'amount', 'oldbalanceOrg', 'newbalanceOrig',
+            'oldbalanceDest', 'newbalanceDest', 'origBalanceDiff', 'destBalanceDiff',
+            'origBalanceError', 'destBalanceError', 'origBalanceZero', 'destBalanceZero',
+            'day', 'hour'
+        ]
+        df = df[expected_columns]
+
         return df
 
     def predict(self, transaction_data):
