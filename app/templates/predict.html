@@ -56,13 +56,31 @@
                 </button>
             </form>
 
-            <!-- Result Display -->
+            <!-- Result Display with Charts -->
             <div id="result-section" class="mt-4 hidden">
-                <div id="result-card" class="card" style="background: rgba(0,0,0,0.2);">
-                    <h4 id="result-title" class="text-center mb-2"></h4>
-                    <div class="text-center">
-                        <p id="result-probability" class="h5 mb-2"></p>
-                        <span id="result-risk" class="badge"></span>
+                <div class="card glass-card">
+                    <div class="text-center mb-4">
+                        <span id="statusBadge" class="status-badge">Processing...</span>
+                        <h2 class="mt-2">Risk Analysis</h2>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div style="text-align: center;">
+                            <h4 class="text-muted mb-3">Fraud Probability</h4>
+                            <div style="position: relative; height: 200px; width: 200px; margin: 0 auto;">
+                                <canvas id="riskChart"></canvas>
+                                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                                    <span id="riskScoreText" style="font-size: 1.5rem; font-weight: bold;">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <h4 class="text-muted mb-3">Top Risk Factors (AI Explanation)</h4>
+                            <div style="height: 200px;">
+                                <canvas id="reasonsChart"></canvas>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

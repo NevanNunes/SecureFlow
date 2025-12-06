@@ -15,3 +15,4 @@ imbalanced-learn
 # Utilities
 joblib
 Werkzeug==3.0.1
+shap

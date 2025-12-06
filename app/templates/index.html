@@ -1,40 +1,117 @@
-{% extends "base.html" %}
+<!DOCTYPE html>
+<html lang="en">
 
-{% block content %}
-<div class="hero-section text-center fade-in">
-    <h1 class="mb-4">Secure Your Transactions with AI</h1>
-    <p class="lead mb-4" style="font-size: 1.25rem; color: var(--text-muted); max-width: 800px; margin: 0 auto;">
-        Advanced machine learning algorithms to detect and prevent fraudulent UPI transactions in real-time.
-        Protect your financial ecosystem with 99% accuracy.
-    </p>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
 
-    <div class="cta-buttons mt-4">
-        <a href="{{ url_for('main.predict_page') }}" class="btn btn-primary">
-            <i class="fas fa-bolt"></i> Try Live Prediction
-        </a>
-        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline" style="margin-left: 1rem;">
-            <i class="fas fa-chart-line"></i> View Analytics
-        </a>
+<body>
+    <div class="background-orb orb-1"></div>
+    <div class="background-orb orb-2"></div>
+
+    <div class="container">
+        <header>
+            <h1>Fraud<span class="highlight">Guard</span> AI</h1>
+            <p>Real-time Transaction Analysis</p>
+        </header>
+
+        <main class="dashboard-grid">
+            <!-- Left Side: Input Form -->
+            <section class="glass-card input-section">
+                <h2>Transaction Details</h2>
+                <form id="predictionForm">
+                    <div class="form-group">
+                        <label for="type">Transaction Type</label>
+                        <select id="type" name="type" required>
+                            <option value="PAYMENT">PAYMENT</option>
+                            <option value="TRANSFER">TRANSFER</option>
+                            <option value="CASH_OUT">CASH_OUT</option>
+                            <option value="DEBIT">DEBIT</option>
+                            <option value="CASH_IN">CASH_IN</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="amount">Amount</label>
+                        <div class="input-wrapper">
+                            <span class="currency">$</span>
+                            <input type="number" id="amount" name="amount" step="0.01" required placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="oldbalanceOrg">Old Balance (Origin)</label>
+                            <input type="number" id="oldbalanceOrg" name="oldbalanceOrg" step="0.01" required
+                                placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="newbalanceOrig">New Balance (Origin)</label>
+                            <input type="number" id="newbalanceOrig" name="newbalanceOrig" step="0.01" required
+                                placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="oldbalanceDest">Old Balance (Dest)</label>
+                            <input type="number" id="oldbalanceDest" name="oldbalanceDest" step="0.01" required
+                                placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="newbalanceDest">New Balance (Dest)</label>
+                            <input type="number" id="newbalanceDest" name="newbalanceDest" step="0.01" required
+                                placeholder="0.00">
+                        </div>
+                    </div>
+
+                    <!-- Hidden step input, default to 1 -->
+                    <input type="hidden" id="step" name="step" value="1">
+
+                    <button type="submit" class="analyze-btn">
+                        Analyze Transaction
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2">
+                            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+                        </svg>
+                    </button>
+                </form>
+            </section>
+
+            <!-- Right Side: Analysis Result -->
+            <section class="glass-card result-section hidden" id="resultSection">
+                <div class="result-header">
+                    <h2>Analysis Result</h2>
+                    <div id="statusBadge" class="status-badge">Processing...</div>
+                </div>
+
+                <div class="charts-container">
+                    <div class="chart-wrapper doughnut-wrapper">
+                        <h3>Risk Score</h3>
+                        <div class="canvas-container">
+                            <canvas id="riskChart"></canvas>
+                            <div class="chart-center-text" id="riskScoreText">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="chart-wrapper bar-wrapper">
+                        <h3>Top Risk Factors (SHAP)</h3>
+                        <canvas id="reasonsChart"></canvas>
+                    </div>
+                </div>
+            </section>
+        </main>
     </div>
 
-    <div class="features grid grid-3 mt-4" style="margin-top: 4rem;">
-        <div class="card">
-            <i class="fas fa-brain" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
-            <h3>AI Powered</h3>
-            <p class="text-muted">Utilizes state-of-the-art deep learning models trained on millions of transactions.
-            </p>
-        </div>
-        <div class="card">
-            <i class="fas fa-stopwatch"
-                style="font-size: 2.5rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
-            <h3>Real-time</h3>
-            <p class="text-muted">Get instant risk assessments with sub-second latency for every transaction.</p>
-        </div>
-        <div class="card">
-            <i class="fas fa-lock" style="font-size: 2.5rem; color: var(--success); margin-bottom: 1rem;"></i>
-            <h3>Secure</h3>
-            <p class="text-muted">Enterprise-grade security ensuring your data remains private and protected.</p>
-        </div>
-    </div>
-</div>
-{% endblock %}
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+
+</html>

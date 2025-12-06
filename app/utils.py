@@ -14,7 +14,7 @@ def validate_transaction_data(data):
             return False, f'Missing required field: {field}'
 
     # Validate transaction type
-    valid_types = ['CASH_OUT', 'TRANSFER']
+    valid_types = ['PAYMENT', 'TRANSFER', 'CASH_OUT', 'DEBIT', 'CASH_IN']
     if data['type'] not in valid_types:
         return False, f'Invalid transaction type. Must be one of: {valid_types}'
 

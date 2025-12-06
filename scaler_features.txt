@@ -1,0 +1,15 @@
+step
+amount
+oldbalanceOrg
+newbalanceOrig
+oldbalanceDest
+newbalanceDest
+origBalanceDiff
+destBalanceDiff
+origBalanceError
+destBalanceError
+origBalanceZero
+destBalanceZero
+day
+hour
+type_encoded

@@ -41,11 +41,7 @@ def predict():
 
         current_app.logger.info(f'Prediction made: {result}')
 
-        return jsonify({
-            'success': True,
-            'result': result,
-            'transaction_data': data
-        }), 200
+        return jsonify(result), 200
 
     except Exception as e:
         current_app.logger.error(f'Prediction error: {str(e)}')

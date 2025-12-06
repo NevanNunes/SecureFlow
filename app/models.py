@@ -4,6 +4,7 @@ import pandas as pd
 from flask import current_app
 import os
 import logging
+import shap
 
 
 class FraudDetectionModel:
@@ -11,6 +12,7 @@ class FraudDetectionModel:
         self.model = None
         self.scaler = None
         self.encoder = None
+        self.explainer = None
         self._initialized = False
 
     def _ensure_loaded(self):
@@ -35,7 +37,14 @@ class FraudDetectionModel:
             with open(encoder_path, 'rb') as f:
                 self.encoder = pickle.load(f)
 
-            current_app.logger.info('Models loaded successfully')
+            # Initialize SHAP explainer (TreeExplainer is best for LightGBM/XGBoost)
+            try:
+                self.explainer = shap.TreeExplainer(self.model)
+                current_app.logger.info('Models and SHAP explainer loaded successfully')
+            except Exception as e:
+                current_app.logger.warning(f'Could not initialize SHAP explainer: {e}')
+                self.explainer = None
+
         except Exception as e:
             logging.error(f'Error loading models: {str(e)}')
             raise
@@ -55,15 +64,22 @@ class FraudDetectionModel:
         df['hour'] = df['step'] % 24
 
         # Encode transaction type
-        df['type'] = self.encoder.transform(df['type'])
-
+        if df['type'].dtype == 'object':
+            df['type_encoded'] = self.encoder.transform(df['type'])
+        
         # Ensure columns are in the correct order for the scaler
         expected_columns = [
-            'step', 'type', 'amount', 'oldbalanceOrg', 'newbalanceOrig',
+            'step', 'amount', 'oldbalanceOrg', 'newbalanceOrig',
             'oldbalanceDest', 'newbalanceDest', 'origBalanceDiff', 'destBalanceDiff',
             'origBalanceError', 'destBalanceError', 'origBalanceZero', 'destBalanceZero',
-            'day', 'hour'
+            'day', 'hour', 'type_encoded'
         ]
+        
+        # Add missing columns if any
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = 0
+
         df = df[expected_columns]
 
         return df
@@ -81,12 +97,42 @@ class FraudDetectionModel:
             # Predict
             prediction = self.model.predict(df_scaled)[0]
             probability = self.model.predict_proba(df_scaled)[0]
+            fraud_prob = probability[1]
+
+            # Calculate SHAP values
+            reasons = []
+            if self.explainer:
+                try:
+                    shap_values = self.explainer.shap_values(df_scaled)
+                    
+                    if isinstance(shap_values, list):
+                        sv = shap_values[1][0]
+                    else:
+                        if len(shap_values.shape) > 1:
+                            sv = shap_values[0]
+                        else:
+                            sv = shap_values
+
+                    feature_names = df.columns.tolist()
+                    
+                    for i, feature in enumerate(feature_names):
+                        reasons.append({
+                            "feature": feature,
+                            "impact": float(sv[i])
+                        })
+                    
+                    reasons.sort(key=lambda x: abs(x['impact']), reverse=True)
+                    reasons = reasons[:3]
+                except Exception as e:
+                    current_app.logger.error(f"SHAP calculation error: {e}")
+                    reasons = []
 
             result = {
-                'is_fraud': bool(prediction),
-                'fraud_probability': float(probability[1]),
-                'confidence': float(max(probability)),
-                'risk_level': self._get_risk_level(probability[1])
+                'risk_score': float(fraud_prob * 100),
+                'fraud_probability': float(fraud_prob),
+                'is_fraud': int(prediction),
+                'risk_level': self._get_risk_level(fraud_prob),
+                'reasons': reasons
             }
 
             return result
@@ -117,5 +163,5 @@ class FraudDetectionModel:
         return results
 
 
-# Initialize model instance (but don't load models yet)
+# Initialize model instance (Global singleton)
 fraud_model = FraudDetectionModel()

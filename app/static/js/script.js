@@ -1,242 +1,160 @@
-// Helper to format currency
-const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD'
-    }).format(amount);
-};
-
-// Helper to show notifications
-const showNotification = (message, type = 'info') => {
-    // Simple alert for now, could be enhanced with a toast library
-    alert(message);
-};
-
-// Dashboard Logic
-const initDashboard = async () => {
-    const statsContainer = document.getElementById('stats-container');
-    if (!statsContainer) return;
-
-    try {
-        const response = await fetch('/api/stats');
-        const data = await response.json();
-
-        document.getElementById('total-predictions').textContent = data.total_predictions.toLocaleString();
-        document.getElementById('fraud-detected').textContent = data.fraud_detected.toLocaleString();
-        document.getElementById('accuracy').textContent = (data.accuracy * 100).toFixed(2) + '%';
-        document.getElementById('last-update').textContent = data.last_update;
-
-    } catch (error) {
-        console.error('Error fetching stats:', error);
-        statsContainer.innerHTML = '<p class="text-danger">Failed to load statistics.</p>';
-    }
-};
-
-// Prediction Logic
-const initPrediction = () => {
-    const predictForm = document.getElementById('predict-form');
-    const batchForm = document.getElementById('batch-form');
-    const resultSection = document.getElementById('result-section');
-    const batchResultSection = document.getElementById('batch-result-section');
-
-    if (predictForm) {
-        predictForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const submitBtn = predictForm.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.innerHTML;
-            
-            try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="loader"></span> Processing...';
-                resultSection.classList.add('hidden');
-
-                const formData = new FormData(predictForm);
-                const data = Object.fromEntries(formData.entries());
-                
-                // Convert numeric strings to numbers
-                for (let key in data) {
-                    if (key !== 'type') {
-                        data[key] = parseFloat(data[key]);
-                    }
-                }
-
-                const response = await fetch('/api/predict', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    displayResult(result);
-                } else {
-                    showNotification(result.error || 'Prediction failed', 'error');
-                }
-
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('An unexpected error occurred', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
-        });
-    }
-
-    if (batchForm) {
-        const fileInput = document.getElementById('csv-file');
-        const uploadArea = document.querySelector('.file-upload');
-
-        // Drag and drop handlers
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, preventDefaults, false);
-        });
-
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-
-        ['dragenter', 'dragover'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => uploadArea.classList.add('dragover'), false);
-        });
-
-        ['dragleave', 'drop'].forEach(eventName => {
-            uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('dragover'), false);
-        });
-
-        uploadArea.addEventListener('drop', handleDrop, false);
-
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            fileInput.files = files;
-            handleFiles(files);
-        }
-
-        fileInput.addEventListener('change', function() {
-            handleFiles(this.files);
-        });
-
-        function handleFiles(files) {
-            if (files.length > 0) {
-                const fileName = files[0].name;
-                document.getElementById('file-name').textContent = fileName;
-                // Auto submit or enable submit button
-            }
-        }
-
-        batchForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            if (!fileInput.files.length) {
-                showNotification('Please select a file first', 'warning');
-                return;
-            }
-
-            const submitBtn = batchForm.querySelector('button[type="submit"]');
-            const originalBtnText = submitBtn.innerHTML;
-
-            try {
-                submitBtn.disabled = true;
-                submitBtn.innerHTML = '<span class="loader"></span> Uploading...';
-                batchResultSection.classList.add('hidden');
-
-                const formData = new FormData();
-                formData.append('file', fileInput.files[0]);
-
-                const response = await fetch('/api/predict-batch', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (response.ok) {
-                    displayBatchResult(result);
-                } else {
-                    showNotification(result.error || 'Batch prediction failed', 'error');
-                }
-
-            } catch (error) {
-                console.error('Error:', error);
-                showNotification('An unexpected error occurred', 'error');
-            } finally {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = originalBtnText;
-            }
-        });
-    }
-};
-
-const displayResult = (data) => {
-    const resultSection = document.getElementById('result-section');
-    const resultCard = document.getElementById('result-card');
-    const resultTitle = document.getElementById('result-title');
-    const resultProb = document.getElementById('result-probability');
-    const resultRisk = document.getElementById('result-risk');
-
-    resultSection.classList.remove('hidden');
-    resultSection.scrollIntoView({ behavior: 'smooth' });
-
-    const isFraud = data.result.is_fraud;
-    const riskLevel = data.result.risk_level;
-
-    if (isFraud) {
-        resultTitle.textContent = 'FRAUD DETECTED';
-        resultTitle.className = 'text-danger mb-2';
-        resultCard.style.borderColor = 'var(--danger)';
-    } else {
-        resultTitle.textContent = 'TRANSACTION SAFE';
-        resultTitle.className = 'text-success mb-2';
-        resultCard.style.borderColor = 'var(--success)';
-    }
-
-    resultProb.textContent = `Probability: ${(data.result.fraud_probability * 100).toFixed(2)}%`;
-    resultRisk.textContent = `Risk Level: ${riskLevel}`;
-    resultRisk.className = `risk-badge risk-${riskLevel.toLowerCase()}`;
-};
-
-const displayBatchResult = (data) => {
-    const section = document.getElementById('batch-result-section');
-    const summary = document.getElementById('batch-summary');
-    const tableBody = document.getElementById('batch-table-body');
-
-    section.classList.remove('hidden');
-    
-    summary.innerHTML = `
-        <div class="card mb-4">
-            <h3>Batch Summary</h3>
-            <div class="grid grid-3">
-                <div>
-                    <p class="text-muted">Total Transactions</p>
-                    <p class="h3">${data.total_transactions}</p>
-                </div>
-                <div>
-                    <p class="text-muted">Fraud Detected</p>
-                    <p class="h3 text-danger">${data.fraud_detected}</p>
-                </div>
-                <div>
-                    <p class="text-muted">Clean Transactions</p>
-                    <p class="h3 text-success">${data.total_transactions - data.fraud_detected}</p>
-                </div>
-            </div>
-        </div>
-    `;
-
-    tableBody.innerHTML = data.results.map(row => `
-        <tr>
-            <td>${row.is_fraud ? '<span class="text-danger">FRAUD</span>' : '<span class="text-success">SAFE</span>'}</td>
-            <td>${(row.fraud_probability * 100).toFixed(1)}%</td>
-            <td>${row.risk_level}</td>
-        </tr>
-    `).join('');
-};
-
-// Initialize based on page
 document.addEventListener('DOMContentLoaded', () => {
-    initDashboard();
-    initPrediction();
+    // Support both index.html (predictionForm) and predict.html (predict-form)
+    const form = document.getElementById('predict-form') || document.getElementById('predictionForm');
+    const resultSection = document.getElementById('result-section') || document.getElementById('resultSection');
+    const statusBadge = document.getElementById('statusBadge');
+    const riskScoreText = document.getElementById('riskScoreText');
+
+    // Only run if form exists
+    if (!form) return;
+
+    let riskChart = null;
+    let reasonsChart = null;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        // Show loading state
+        const btn = form.querySelector('button');
+        const originalBtnText = btn.innerHTML;
+        btn.innerHTML = 'Analyzing...';
+        btn.disabled = true;
+
+        // Gather data
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        // Convert numbers
+        for (const key in data) {
+            if (key !== 'type') {
+                data[key] = parseFloat(data[key]);
+            }
+        }
+
+        try {
+            const response = await fetch('/api/predict', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                displayResult(result);
+            } else {
+                alert('Error: ' + (result.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred during prediction.');
+        } finally {
+            btn.innerHTML = originalBtnText;
+            btn.disabled = false;
+        }
+    });
+
+    function displayResult(data) {
+        // Show result section
+        resultSection.classList.remove('hidden');
+
+        // Update Status Badge
+        if (data.is_fraud === 1) {
+            statusBadge.textContent = 'HIGH RISK';
+            statusBadge.className = 'status-badge status-fraud';
+        } else {
+            statusBadge.textContent = 'SAFE';
+            statusBadge.className = 'status-badge status-safe';
+        }
+
+        // Update Risk Score Text
+        riskScoreText.textContent = `${Math.round(data.risk_score)}%`;
+
+        // Render Charts
+        renderRiskChart(data.risk_score);
+        renderReasonsChart(data.reasons);
+
+        // Scroll to result on mobile
+        if (window.innerWidth < 900) {
+            resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+    }
+
+    function renderRiskChart(score) {
+        const ctx = document.getElementById('riskChart').getContext('2d');
+
+        if (riskChart) {
+            riskChart.destroy();
+        }
+
+        const color = score > 50 ? '#ff7675' : '#00b894';
+        const emptyColor = 'rgba(255, 255, 255, 0.1)';
+
+        riskChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Risk', 'Safe'],
+                datasets: [{
+                    data: [score, 100 - score],
+                    backgroundColor: [color, emptyColor],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                cutout: '75%',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                }
+            }
+        });
+    }
+
+    function renderReasonsChart(reasons) {
+        const ctx = document.getElementById('reasonsChart').getContext('2d');
+
+        if (reasonsChart) {
+            reasonsChart.destroy();
+        }
+
+        const labels = reasons.map(r => r.feature);
+        const data = reasons.map(r => Math.abs(r.impact)); // Use absolute impact for visualization length
+
+        reasonsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'SHAP Impact',
+                    data: data,
+                    backgroundColor: 'rgba(157, 78, 221, 0.6)',
+                    borderColor: '#9d4edd',
+                    borderWidth: 1,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                scales: {
+                    x: {
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        ticks: { color: '#a0a0a0' }
+                    },
+                    y: {
+                        grid: { display: false },
+                        ticks: { color: '#ffffff' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
 });
