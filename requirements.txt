@@ -1,0 +1,17 @@
+# Core Framework
+Flask==3.0.0
+flask-cors==4.0.0
+python-dotenv==1.0.0
+
+# Data Processing
+numpy
+pandas
+
+# Machine Learning
+scikit-learn
+lightgbm
+imbalanced-learn
+
+# Utilities
+joblib
+Werkzeug==3.0.1

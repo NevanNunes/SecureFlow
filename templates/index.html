@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-section text-center fade-in">
+    <h1 class="mb-4">Secure Your Transactions with AI</h1>
+    <p class="lead mb-4" style="font-size: 1.25rem; color: var(--text-muted); max-width: 800px; margin: 0 auto;">
+        Advanced machine learning algorithms to detect and prevent fraudulent UPI transactions in real-time.
+        Protect your financial ecosystem with 99% accuracy.
+    </p>
+
+    <div class="cta-buttons mt-4">
+        <a href="{{ url_for('main.predict_page') }}" class="btn btn-primary">
+            <i class="fas fa-bolt"></i> Try Live Prediction
+        </a>
+        <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline" style="margin-left: 1rem;">
+            <i class="fas fa-chart-line"></i> View Analytics
+        </a>
+    </div>
+
+    <div class="features grid grid-3 mt-4" style="margin-top: 4rem;">
+        <div class="card">
+            <i class="fas fa-brain" style="font-size: 2.5rem; color: var(--primary-color); margin-bottom: 1rem;"></i>
+            <h3>AI Powered</h3>
+            <p class="text-muted">Utilizes state-of-the-art deep learning models trained on millions of transactions.
+            </p>
+        </div>
+        <div class="card">
+            <i class="fas fa-stopwatch"
+                style="font-size: 2.5rem; color: var(--secondary-color); margin-bottom: 1rem;"></i>
+            <h3>Real-time</h3>
+            <p class="text-muted">Get instant risk assessments with sub-second latency for every transaction.</p>
+        </div>
+        <div class="card">
+            <i class="fas fa-lock" style="font-size: 2.5rem; color: var(--success); margin-bottom: 1rem;"></i>
+            <h3>Secure</h3>
+            <p class="text-muted">Enterprise-grade security ensuring your data remains private and protected.</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
